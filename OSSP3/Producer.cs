@@ -25,9 +25,8 @@ namespace OSSP3
             fileQueue.Add(name);
         } 
 
-        static void TraverseFS(string root, Action<string> action)
+        void TraverseFS(string root, Action<string> action)
         {
-            int processors = System.Environment.ProcessorCount;
             var dirs = new Stack<string>();
 
             if (!Directory.Exists(root))
@@ -47,9 +46,13 @@ namespace OSSP3
                 {
                     subDirs = Directory.GetDirectories(currentDir);
                 }
-                // Just continue silently - read what is readable
                 catch (UnauthorizedAccessException) {}
                 catch (DirectoryNotFoundException) {}
+
+                foreach (var dir in subDirs)
+                {
+                    dirs.Push(dir);
+                }
 
                 try 
                 {
@@ -59,32 +62,10 @@ namespace OSSP3
                 catch (DirectoryNotFoundException) {}
                 catch (IOException) {}
 
-                foreach (var dir in subDirs)
+                foreach (var file in files)
                 {
-                    dirs.Push(dir);
+                    action(file);
                 }
-
-                try
-                {
-                    // Few files - execute sequentially
-                    if (files.Length < processors)
-                    {
-                        foreach (var file in files)
-                        {
-                            action(file);
-                        }
-                    }
-                    // Many files - go parallel
-                    else
-                    {
-                        Parallel.ForEach(files, (file) =>
-                        {
-                            action(file);
-                        });
-                    }
-                }
-                // Peace and quiet.
-                catch (AggregateException) {}
             }
         }
     }
